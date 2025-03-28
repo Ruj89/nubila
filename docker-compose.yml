@@ -1,0 +1,30 @@
+services:
+  dev-server:
+    container_name: nubila
+    image: nginx
+    ports:
+      - "8080:80"
+    user: "${UID}:${GID}"
+    volumes:
+      - ./docker/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./browser/src:/usr/share/nginx/html:ro
+
+  content-server:
+    container_name: minio
+    image: minio/minio
+    env_file:
+      - docker/minio.env
+    ports: 
+      - 9001:9001
+    command: server
+
+  dev-container:
+    container_name: nubila-dev
+    image: ubuntu
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docker/init.sh:/init.sh
+      - .:/workspace
+    entrypoint: /init.sh
+  
