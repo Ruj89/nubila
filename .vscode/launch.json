@@ -11,5 +11,15 @@
             "url": "http://localhost:8080",
             "webRoot": "${workspaceFolder}/browser/src",
         },
+        {
+            "name": "Attach to Docker Node",
+            "type": "node",
+            "request": "attach",
+            "port": 3000,
+            "sourceMaps": true,
+            "localRoot": "${workspaceFolder}/cli",
+            "remoteRoot": "/workspace/cli",
+            "preLaunchTask": "Debug node.js application",
+        }
     ]
 }

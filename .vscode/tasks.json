@@ -1,0 +1,36 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Launch development container",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "command": "docker compose up -d",
+            "problemMatcher": [],
+            "isBackground": true,
+        },
+        {
+            "label": "Debug node.js application",
+            "type": "shell",
+            "command": "docker exec -it -u ubuntu -w /workspace/cli nubila-dev bash -ic '/debug.sh' | sed 's|\/workspace|${workspaceFolder}|g'",
+            "problemMatcher": [
+                {
+                    "pattern": {
+                        "regexp": "Debugger listening .",
+                    },
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": "> nubila-cli@\\d+.\\d+.\\d+ debug",
+                        "endsPattern": "Debugger listening .",
+                    }
+                }
+            ],
+            "isBackground": true,
+            "dependsOn": "Launch development container"
+        }
+    ]
+}

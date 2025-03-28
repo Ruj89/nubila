@@ -23,8 +23,11 @@ services:
     image: ubuntu
     ports:
       - "3000:3000"
+    environment:
+      - SECRET=waitaconnection
     volumes:
       - ./docker/init.sh:/init.sh
+      - ./docker/debug.sh:/debug.sh
       - .:/workspace
     entrypoint: /init.sh
   
