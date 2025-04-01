@@ -16,7 +16,7 @@
         {
             "label": "Debug node.js application",
             "type": "shell",
-            "command": "docker exec -it -u ubuntu -w /workspace/cli nubila-dev bash -ic '/debug.sh' | sed 's|\/workspace|${workspaceFolder}|g'",
+            "command": "docker exec -it -u ubuntu -w /workspace/cli nubila-bridge bash -ic '/debug.sh' | sed 's|\/workspace|${workspaceFolder}|g'",
             "problemMatcher": [
                 {
                     "pattern": {

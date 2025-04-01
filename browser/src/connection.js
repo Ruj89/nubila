@@ -44,9 +44,7 @@ async function openChannel(initiator, secret) {
 	const fakeTorrent = {
 		infoHash,
 		announce: [
-			'wss://tracker.openwebtorrent.com',
-			'wss://tracker.btorrent.xyz',
-			'wss://tracker.fastcast.nz'
+			'ws://localhost:8000'
 		]
 	};
 

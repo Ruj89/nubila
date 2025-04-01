@@ -18,9 +18,7 @@ const infoHash = await sha1(process.env.SECRET);
 const fakeTorrent = {
     infoHash,
     announce: [
-        'wss://tracker.openwebtorrent.com',
-        'wss://tracker.btorrent.xyz',
-        'wss://tracker.fastcast.nz'
+        'ws://webtorrent-tracker:8000'
     ]
 };
 const torrent = client.add(fakeTorrent);

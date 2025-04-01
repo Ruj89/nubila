@@ -1,6 +1,6 @@
 services:
-  dev-server:
-    container_name: nubila
+  web-server:
+    container_name: nubila-web
     image: nginx
     ports:
       - "8080:80"
@@ -18,8 +18,8 @@ services:
       - 9001:9001
     command: server
 
-  dev-container:
-    container_name: nubila-dev
+  bridge-server:
+    container_name: nubila-bridge
     image: ubuntu
     ports:
       - "3000:3000"
@@ -30,4 +30,14 @@ services:
       - ./docker/debug.sh:/debug.sh
       - .:/workspace
     entrypoint: /init.sh
-  
+
+  webtorrent-tracker:
+    image: node:18
+    container_name: tracker
+    command: >
+      sh -c "npm install -g bittorrent-tracker &&
+             bittorrent-tracker --ws --interval 120000"
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
