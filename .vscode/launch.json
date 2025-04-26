@@ -12,7 +12,7 @@
             "webRoot": "${workspaceFolder}/browser/src",
         },
         {
-            "name": "Attach to Docker Node",
+            "name": "Attach to Docker Node CLI",
             "type": "node",
             "request": "attach",
             "port": 3000,
@@ -20,6 +20,14 @@
             "localRoot": "${workspaceFolder}/cli",
             "remoteRoot": "/workspace/cli",
             "preLaunchTask": "Debug node.js application",
+        },
+        {
+            "name": "Attach to Docker Node websocket bridge",
+            "type": "node",
+            "request": "attach",
+            "port": 3000,
+            "sourceMaps": true,
+            "localRoot": "${workspaceFolder}/websocket_bridge"
         }
     ]
 }
