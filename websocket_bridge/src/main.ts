@@ -21,7 +21,9 @@ await (async function main() {
     dotenv.config();
 
     let pendingSockets: WebSocket[] = [];
-    let isServer = true;
+    let isServer = !process.env.NO_SERVER;
+    const epoxyIp = process.env.EPOXY_IP ?? "ws://localhost:1337";
+    const wsPort = Number(process.env.WS_PORT ?? "8080");
     let ws: WebSocket;
 
     let quit: () => void;
@@ -78,9 +80,9 @@ await (async function main() {
         if (!isServer) {
             console.log(`WebRTC: 📩 Received WebSocket connection request from peer ${peerId}`);
             const id = <number>(<{ [key: string]: JsonValue }>metadata)?.id
-            ws = new WebSocket("ws://localhost:1337");
+            ws = new WebSocket(epoxyIp);
             ws.on('open', () => {
-                console.log(`WS: ✅ WebSocket client connected to ws://localhost:1337`);
+                console.log(`WS: ✅ WebSocket client connected to ${epoxyIp}`);
             })
             ws.on('message', (data) => {
                 console.log(`WS: 📩 Received through WebSocket from server, sending through WebRTC`);
@@ -89,39 +91,41 @@ await (async function main() {
         }
     })
 
-    const wss = new WebSocketServer({ port: 8080 });
-    wss.on('listening', () => {
-        console.log(`WS: ✅ Server is listening on ws://localhost:8080`);
-        isServer = true;
-    });
-    wss.on('connection', (socket: WebSocket, request) => {
-        const ip = request.socket.remoteAddress;
-        console.log(`WS: 🤝 New client connected, activating remote WS connection though WebRTC message: ${ip}`);
-        const id = pendingSockets.push(socket);
-        activateConnection(Buffer.from("activate"), undefined, { id });
-
-        socket.on('message', (data) => {
-            console.log(`WS: 📩 Received from WebSocket ${ip}`);
+    if (isServer) {
+        const wss = new WebSocketServer({ port: wsPort });
+        wss.on('listening', () => {
+            console.log(`WS: ✅ Server is listening on ws://localhost:${wsPort}`);
+            isServer = true;
+        });
+        wss.on('connection', (socket: WebSocket, request) => {
+            const ip = request.socket.remoteAddress;
+            console.log(`WS: 🤝 New client connected, activating remote WS connection though WebRTC message: ${ip}`);
             const id = pendingSockets.push(socket);
-            sendRTCMessage(rawToBuffer(data), undefined, { id });
-        });
+            activateConnection(Buffer.from("activate"), undefined, { id });
 
-        socket.on('close', (code, _) => {
-            console.log(`WS: 🚪 Client ${ip} disconnected (${code})`);
-        });
+            socket.on('message', (data) => {
+                console.log(`WS: 📩 Received from WebSocket ${ip}`);
+                const id = pendingSockets.push(socket);
+                sendRTCMessage(rawToBuffer(data), undefined, { id });
+            });
 
-        socket.on('error', (err) => {
-            console.error(`WS: ❌ Connection error with ${ip}:`, err);
-            quit();
-        });
-    });
-    wss.on('error', (e: any) => {
-        if (e?.code != "EADDRINUSE")
-            throw e;
+            socket.on('close', (code, _) => {
+                console.log(`WS: 🚪 Client ${ip} disconnected (${code})`);
+            });
 
-        console.log("WS: 😴 Assuming server is already started");
-        isServer = false;
-    });
+            socket.on('error', (err) => {
+                console.error(`WS: ❌ Connection error with ${ip}:`, err);
+                quit();
+            });
+        });
+        wss.on('error', (e: any) => {
+            if (e?.code != "EADDRINUSE")
+                throw e;
+
+            console.log("WS: 😴 Assuming server is already started");
+            isServer = false;
+        });
+    }
 
     console.log("WebRTC: ⏳ Waiting for peers on torrent");
     await running;
