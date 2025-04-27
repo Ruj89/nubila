@@ -1,6 +1,6 @@
 import dotenv from "dotenv"
 import { joinRoom } from "trystero/torrent"
-import nodeDatachannelPolyfill from 'node-datachannel/polyfill';
+import { RTCPeerConnection } from 'node-datachannel/polyfill';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { DataPayload, JsonValue } from "trystero";
 
@@ -31,7 +31,7 @@ await (async function main() {
 
     const config = {
         appId: "nubila",
-        rtcPolyfill: nodeDatachannelPolyfill.RTCPeerConnection,
+        rtcPolyfill: RTCPeerConnection,
         password: "o2g7s~ybqk2Mq2&k"
     };
     const room = joinRoom(config, `yoyodyne1`);
@@ -98,7 +98,7 @@ await (async function main() {
         const ip = request.socket.remoteAddress;
         console.log(`WS: 🤝 New client connected, activating remote WS connection though WebRTC message: ${ip}`);
         const id = pendingSockets.push(socket);
-        activateConnection(rawToBuffer(Buffer.from("activate")), undefined, { id });
+        activateConnection(Buffer.from("activate"), undefined, { id });
 
         socket.on('message', (data) => {
             console.log(`WS: 📩 Received from WebSocket ${ip}`);
