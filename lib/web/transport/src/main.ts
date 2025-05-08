@@ -1,9 +1,9 @@
 import type { BareHeaders, TransferrableResponse, BareTransport } from "@mercuryworkshop/bare-mux";
-import initEpoxy, { EpoxyClient, EpoxyClientOptions, EpoxyHandlers, info as epoxyInfo } from "@mercuryworkshop/epoxy-tls";
+import initNubila, { NubilaClient, NubilaClientOptions, NubilaHandlers, info as nubilaInfo } from "nubila";
 
-export { epoxyInfo };
+export { nubilaInfo };
 
-export type EpoxyOptions = {
+export type NubilaOptions = {
 	wisp_v2?: boolean,
 	udp_extension_required?: boolean,
 
@@ -17,43 +17,35 @@ export type EpoxyOptions = {
 	buffer_size?: number,
 }
 const opts = [
-	"wisp_v2",
-	"udp_extension_required",
-	"title_case_headers",
-	"ws_title_case_headers",
-	"wisp_ws_protocols",
-	"redirect_limit",
-	"header_limit",
-	"buffer_size"
 ];
 
-export default class EpoxyTransport implements BareTransport {
+export default class NubilaTransport implements BareTransport {
 	ready = false;
 
-	client_version: typeof epoxyInfo;
-	client: EpoxyClient = null!;
+	client_version: typeof nubilaInfo;
+	client: NubilaClient = null!;
 	wisp: string;
-	opts: EpoxyOptions;
+	opts: NubilaOptions;
 
-	constructor(opts: EpoxyOptions & { wisp: string }) {
+	constructor(opts: NubilaOptions & { wisp: string }) {
 		this.wisp = opts.wisp;
 		this.opts = opts;
 
-		this.client_version = epoxyInfo;
+		this.client_version = nubilaInfo;
 	}
 
-	setopt(opts: EpoxyClientOptions, opt: string) {
+	setopt(opts: NubilaClientOptions, opt: string) {
 		// == allows both null and undefined
 		if (this.opts[opt] != null) opts[opt] = this.opts[opt];
 	}
 
 	async init() {
-		await initEpoxy();
+		await initNubila();
 
-		let options = new EpoxyClientOptions();
+		let options = new NubilaClientOptions();
 		options.user_agent = navigator.userAgent;
 		opts.forEach(x => this.setopt(options, x))
-		this.client = new EpoxyClient(this.wisp, options);
+		this.client = new NubilaClient(this.wisp, options);
 
 		this.ready = true;
 	}
@@ -65,7 +57,7 @@ export default class EpoxyTransport implements BareTransport {
 		method: string,
 		body: BodyInit | null,
 		headers: BareHeaders,
-		signal: AbortSignal | undefined
+		_signal: AbortSignal | undefined
 	): Promise<TransferrableResponse> {
 		if (body instanceof Blob)
 			body = await body.arrayBuffer();
@@ -93,7 +85,7 @@ export default class EpoxyTransport implements BareTransport {
 		onclose: (code: number, reason: string) => void,
 		onerror: (error: string) => void,
 	): [(data: Blob | ArrayBuffer | string) => void, (code: number, reason: string) => void] {
-		let handlers = new EpoxyHandlers(
+		let handlers = new NubilaHandlers(
 			onopen,
 			onclose,
 			onerror,
