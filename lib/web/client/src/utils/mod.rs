@@ -18,7 +18,7 @@ use hyper::rt::Executor;
 use pin_project_lite::pin_project;
 use wasm_bindgen::prelude::*;
 
-use crate::EpoxyError;
+use crate::NubilaError;
 
 #[wasm_bindgen]
 extern "C" {
@@ -61,11 +61,11 @@ pub fn is_null_body(code: u16) -> bool {
 }
 
 pub trait UriExt {
-	fn get_redirect(&self, location: &HeaderValue) -> Result<Uri, EpoxyError>;
+	fn get_redirect(&self, location: &HeaderValue) -> Result<Uri, NubilaError>;
 }
 
 impl UriExt for Uri {
-	fn get_redirect(&self, location: &HeaderValue) -> Result<Uri, EpoxyError> {
+	fn get_redirect(&self, location: &HeaderValue) -> Result<Uri, NubilaError> {
 		let new_uri = location.to_str()?.parse::<hyper::Uri>()?;
 		let mut new_parts: http::uri::Parts = new_uri.into();
 		if new_parts.scheme.is_none() {
@@ -177,23 +177,23 @@ impl Sink<Payload> for WispTransportWrite {
 	fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
 		self.0
 			.poll_ready_unpin(cx)
-			.map_err(|x| WispError::WsImplError(Box::new(EpoxyError::wisp_transport(x))))
+			.map_err(|x| WispError::WsImplError(Box::new(NubilaError::wisp_transport(x))))
 	}
 
 	fn start_send(mut self: Pin<&mut Self>, item: Payload) -> Result<(), Self::Error> {
 		self.0
 			.start_send_unpin(Uint8Array::from(item.as_ref()).into())
-			.map_err(|x| WispError::WsImplError(Box::new(EpoxyError::wisp_transport(x))))
+			.map_err(|x| WispError::WsImplError(Box::new(NubilaError::wisp_transport(x))))
 	}
 
 	fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
 		self.0
 			.poll_flush_unpin(cx)
-			.map_err(|x| WispError::WsImplError(Box::new(EpoxyError::wisp_transport(x))))
+			.map_err(|x| WispError::WsImplError(Box::new(NubilaError::wisp_transport(x))))
 	}
 	fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
 		self.0
 			.poll_close_unpin(cx)
-			.map_err(|x| WispError::WsImplError(Box::new(EpoxyError::wisp_transport(x))))
+			.map_err(|x| WispError::WsImplError(Box::new(NubilaError::wisp_transport(x))))
 	}
 }

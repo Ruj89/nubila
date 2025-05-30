@@ -9,13 +9,13 @@ use wasm_streams::{ReadableStream, WritableStream};
 use crate::{
 	stream_provider::{ProviderAsyncRW, ProviderUnencryptedStream},
 	utils::{convert_body, object_set, ReaderStream},
-	EpoxyError, EpoxyIoStream,
+	NubilaError, NubilaIoStream,
 };
 
 fn create_iostream(
-	stream: Pin<Box<dyn Stream<Item = Result<Bytes, EpoxyError>>>>,
-	sink: Pin<Box<dyn Sink<Bytes, Error = EpoxyError>>>,
-) -> EpoxyIoStream {
+	stream: Pin<Box<dyn Stream<Item = Result<Bytes, NubilaError>>>>,
+	sink: Pin<Box<dyn Sink<Bytes, Error = NubilaError>>>,
+) -> NubilaIoStream {
 	let read = ReadableStream::from_stream(
 		stream
 			.map_ok(|x| Uint8Array::from(x.as_ref()).into())
@@ -26,7 +26,7 @@ fn create_iostream(
 		sink.with(|x| async {
 			convert_body(x)
 				.await
-				.map_err(|_| EpoxyError::InvalidPayload)
+				.map_err(|_| NubilaError::InvalidPayload)
 				.map(|x| Bytes::from(x.0.to_vec()))
 		})
 		.sink_map_err(Into::into),
@@ -39,18 +39,18 @@ fn create_iostream(
 	JsValue::from(out).into()
 }
 
-pub fn iostream_from_asyncrw(asyncrw: ProviderAsyncRW, buffer_size: usize) -> EpoxyIoStream {
+pub fn iostream_from_asyncrw(asyncrw: ProviderAsyncRW, buffer_size: usize) -> NubilaIoStream {
 	let (rx, tx) = asyncrw.split();
 	create_iostream(
-		Box::pin(ReaderStream::new(Box::pin(rx), buffer_size).map_err(EpoxyError::Io)),
-		Box::pin(tx.into_sink().sink_map_err(EpoxyError::Io)),
+		Box::pin(ReaderStream::new(Box::pin(rx), buffer_size).map_err(NubilaError::Io)),
+		Box::pin(tx.into_sink().sink_map_err(NubilaError::Io)),
 	)
 }
 
-pub fn iostream_from_stream(stream: ProviderUnencryptedStream) -> EpoxyIoStream {
+pub fn iostream_from_stream(stream: ProviderUnencryptedStream) -> NubilaIoStream {
 	let (rx, tx) = stream.into_split();
 	create_iostream(
-		Box::pin(rx.map_ok(Bytes::from).map_err(EpoxyError::Wisp)),
-		Box::pin(tx.sink_map_err(EpoxyError::Wisp)),
+		Box::pin(rx.map_ok(Bytes::from).map_err(NubilaError::Wisp)),
+		Box::pin(tx.sink_map_err(NubilaError::Wisp)),
 	)
 }

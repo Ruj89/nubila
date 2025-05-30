@@ -18,7 +18,7 @@ use wisp_mux::{
 
 use crate::{
 	stream_provider::{ProviderWispTransportRead, ProviderWispTransportWrite},
-	EpoxyError,
+	NubilaError,
 };
 
 #[derive(Error, Debug)]
@@ -91,7 +91,7 @@ impl WebSocketReader {
 }
 
 impl WebSocketWrapper {
-	pub fn connect(url: &str, protocols: &[String]) -> Result<(Self, WebSocketReader), EpoxyError> {
+	pub fn connect(url: &str, protocols: &[String]) -> Result<(Self, WebSocketReader), NubilaError> {
 		let (read_tx, read_rx) = flume::unbounded();
 		let closed = Arc::new(AtomicBool::new(false));
 
@@ -146,7 +146,7 @@ impl WebSocketWrapper {
 					.into(),
 			)
 		}
-		.map_err(|x| EpoxyError::WebSocketConnectFailed(format!("{x:?}")))?;
+		.map_err(|x| NubilaError::WebSocketConnectFailed(format!("{x:?}")))?;
 		ws.set_binary_type(BinaryType::Arraybuffer);
 		ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
 		ws.set_onopen(Some(onopen.as_ref().unchecked_ref()));

@@ -11,7 +11,7 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen::{prelude::*, JsCast, JsValue};
 use wasm_streams::ReadableStream;
 
-use crate::{console_error, EpoxyError};
+use crate::{console_error, NubilaError};
 
 use super::ReaderStream;
 
@@ -106,10 +106,10 @@ pub struct StreamingInnerBody(
 	SendWrapper<ReadableStream>,
 );
 impl StreamingInnerBody {
-	pub fn from_teed(a: ReadableStream, b: ReadableStream) -> Result<Self, EpoxyError> {
+	pub fn from_teed(a: ReadableStream, b: ReadableStream) -> Result<Self, NubilaError> {
 		let reader = a
 			.try_into_stream()
-			.map_err(|x| EpoxyError::StreamingBodyConvertFailed(format!("{x:?}")))?;
+			.map_err(|x| NubilaError::StreamingBodyConvertFailed(format!("{x:?}")))?;
 		let reader = reader
 			.then(|x| async {
 				Ok::<Bytes, JsValue>(Bytes::from(convert_body(x?).await?.0.to_vec()))
@@ -134,13 +134,13 @@ impl Clone for StreamingInnerBody {
 	fn clone(&self) -> Self {
 		match ReadableStream::from_raw(self.1.as_raw().clone())
 			.try_tee()
-			.map_err(|x| EpoxyError::StreamingBodyTeeFailed(format!("{x:?}")))
+			.map_err(|x| NubilaError::StreamingBodyTeeFailed(format!("{x:?}")))
 			.and_then(|(a, b)| StreamingInnerBody::from_teed(a, b))
 		{
 			Ok(x) => x,
 			Err(x) => {
 				console_error!(
-					"epoxy internal error: failed to clone streaming body: {:?}",
+					"nubila internal error: failed to clone streaming body: {:?}",
 					x
 				);
 				unreachable!("failed to clone streaming body");
@@ -152,12 +152,12 @@ impl Clone for StreamingInnerBody {
 pub type StreamingBody = Either<StreamBody<StreamingInnerBody>, Full<Bytes>>;
 
 impl MaybeStreamingBody {
-	pub fn into_httpbody(self) -> Result<StreamingBody, EpoxyError> {
+	pub fn into_httpbody(self) -> Result<StreamingBody, NubilaError> {
 		match self {
 			Self::Streaming(x) => {
 				let (a, b) = ReadableStream::from_raw(x)
 					.try_tee()
-					.map_err(|x| EpoxyError::StreamingBodyTeeFailed(format!("{x:?}")))?;
+					.map_err(|x| NubilaError::StreamingBodyTeeFailed(format!("{x:?}")))?;
 
 				Ok(Either::Left(StreamBody::new(
 					StreamingInnerBody::from_teed(a, b)?,
@@ -201,7 +201,7 @@ pub fn asyncread_to_readablestream(
 	ReadableStream::from_stream(
 		ReaderStream::new(read, buffer_size)
 			.map_ok(|x| Uint8Array::from(x.as_ref()).into())
-			.map_err(|x| EpoxyError::from(x).into()),
+			.map_err(|x| NubilaError::from(x).into()),
 	)
 	.into_raw()
 }

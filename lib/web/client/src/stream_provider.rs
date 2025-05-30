@@ -26,7 +26,7 @@ use wisp_mux::{
 use crate::{
 	console_error, console_log,
 	utils::{IgnoreCloseNotify, NoCertificateVerification},
-	EpoxyClientOptions, EpoxyError,
+	NubilaClientOptions, NubilaError,
 };
 
 pub type ProviderUnencryptedStream = MuxStream<ProviderWispTransportWrite>;
@@ -43,7 +43,7 @@ pub type ProviderWispTransportGenerator = Box<
 				dyn Future<
 						Output = Result<
 							(ProviderWispTransportRead, ProviderWispTransportWrite),
-							EpoxyError,
+							NubilaError,
 						>,
 					> + Sync
 					+ Send,
@@ -67,8 +67,8 @@ pub struct StreamProvider {
 impl StreamProvider {
 	pub fn new(
 		wisp_generator: ProviderWispTransportGenerator,
-		options: &EpoxyClientOptions,
-	) -> Result<Self, EpoxyError> {
+		options: &NubilaClientOptions,
+	) -> Result<Self, NubilaError> {
 		let provider = Arc::new(futures_rustls::rustls::crypto::ring::default_provider());
 		let client_config = ClientConfig::builder_with_provider(provider.clone())
 			.with_safe_default_protocol_versions()?;
@@ -88,7 +88,7 @@ impl StreamProvider {
 								.collect::<Vec<_>>()
 						})
 						.collect();
-					let pems = pems.map_err(EpoxyError::Pemfile)??;
+					let pems = pems.map_err(NubilaError::Pemfile)??;
 					let certstore: RootCertStore = pems.into_iter().chain(TLS_SERVER_ROOTS.iter().cloned()).collect();
 				} else {
 					let certstore: RootCertStore = TLS_SERVER_ROOTS.iter().cloned().collect();
@@ -118,7 +118,7 @@ impl StreamProvider {
 	async fn create_client(
 		&self,
 		mut locked: MutexGuard<'_, Option<ClientMux<ProviderWispTransportWrite>>>,
-	) -> Result<(), EpoxyError> {
+	) -> Result<(), NubilaError> {
 		let extensions_vec: Vec<AnyProtocolExtensionBuilder> =
 			vec![AnyProtocolExtensionBuilder::new(
 				UdpProtocolExtensionBuilder,
@@ -141,9 +141,9 @@ impl StreamProvider {
 		let current_client = self.current_client.clone();
 		spawn_local(async move {
 			match fut.await {
-				Ok(()) => console_log!("epoxy: wisp multiplexor task ended successfully"),
+				Ok(()) => console_log!("nubila: wisp multiplexor task ended successfully"),
 				Err(x) => console_error!(
-					"epoxy: wisp multiplexor task ended with an error: {} {:?}",
+					"nubila: wisp multiplexor task ended with an error: {} {:?}",
 					x,
 					x
 				),
@@ -153,7 +153,7 @@ impl StreamProvider {
 		Ok(())
 	}
 
-	pub async fn replace_client(&self) -> Result<(), EpoxyError> {
+	pub async fn replace_client(&self) -> Result<(), NubilaError> {
 		self.create_client(self.current_client.lock().await).await
 	}
 
@@ -162,7 +162,7 @@ impl StreamProvider {
 		stream_type: StreamType,
 		host: String,
 		port: u16,
-	) -> Result<ProviderUnencryptedStream, EpoxyError> {
+	) -> Result<ProviderUnencryptedStream, NubilaError> {
 		Box::pin(async {
 			let locked = self.current_client.lock().await;
 			if let Some(mux) = locked.as_ref() {
@@ -181,7 +181,7 @@ impl StreamProvider {
 		stream_type: StreamType,
 		host: String,
 		port: u16,
-	) -> Result<ProviderUnencryptedAsyncRW, EpoxyError> {
+	) -> Result<ProviderUnencryptedAsyncRW, NubilaError> {
 		Ok(self
 			.get_stream(stream_type, host, port)
 			.await?
@@ -193,7 +193,7 @@ impl StreamProvider {
 		host: String,
 		port: u16,
 		http: bool,
-	) -> Result<ProviderTlsAsyncRW, EpoxyError> {
+	) -> Result<ProviderTlsAsyncRW, NubilaError> {
 		let stream = self
 			.get_asyncread(StreamType::Tcp, host.clone(), port)
 			.await?;
@@ -222,7 +222,7 @@ impl StreamProvider {
 				if matches!(err.kind(), ErrorKind::UnexpectedEof) {
 					// maybe actually a wisp error?
 					if let Some(reason) = stream.get_close_reason() {
-						return Err(EpoxyError::WispCloseReason(reason, err));
+						return Err(NubilaError::WispCloseReason(reason, err));
 					}
 				}
 				Err(err.into())
@@ -311,14 +311,14 @@ impl Connection for HyperIo {
 pub struct StreamProviderService(pub Arc<StreamProvider>);
 
 impl StreamProviderService {
-	async fn connect(self, req: hyper::Uri) -> Result<HyperIo, EpoxyError> {
-		let scheme = req.scheme_str().ok_or(EpoxyError::InvalidUrlScheme(None))?;
-		let host = req.host().ok_or(EpoxyError::NoUrlHost)?.to_string();
+	async fn connect(self, req: hyper::Uri) -> Result<HyperIo, NubilaError> {
+		let scheme = req.scheme_str().ok_or(NubilaError::InvalidUrlScheme(None))?;
+		let host = req.host().ok_or(NubilaError::NoUrlHost)?.to_string();
 		let port = req.port_u16().map_or_else(
 			|| match scheme {
 				"https" | "wss" => Ok(443),
 				"http" | "ws" => Ok(80),
-				_ => Err(EpoxyError::NoUrlPort),
+				_ => Err(NubilaError::NoUrlPort),
 			},
 			Ok,
 		)?;
@@ -329,7 +329,7 @@ impl StreamProviderService {
 				"http" | "ws" => {
 					Either::Right(self.0.get_asyncread(StreamType::Tcp, host, port).await?)
 				}
-				_ => return Err(EpoxyError::InvalidUrlScheme(Some(scheme.to_string()))),
+				_ => return Err(NubilaError::InvalidUrlScheme(Some(scheme.to_string()))),
 			},
 		})
 	}
@@ -337,7 +337,7 @@ impl StreamProviderService {
 
 impl ConnectSvc for StreamProviderService {
 	type Connection = HyperIo;
-	type Error = EpoxyError;
+	type Error = NubilaError;
 	type Future = impl Future<Output = Result<Self::Connection, Self::Error>> + Send;
 
 	fn connect(self, req: hyper::Uri) -> Self::Future {

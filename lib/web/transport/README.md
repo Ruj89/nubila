@@ -7,5 +7,5 @@ Usage of this transport is as simple as setting the transport and providing a ke
 ```js
 import { SetTransport } from '@mercuryworkshop/bare-mux';
 
-SetTransport("EpxMod.EpoxyClient", { hash: "TODO" });
+SetTransport("EpxMod.NubilaClient", { hash: "TODO" });
 ```

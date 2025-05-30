@@ -1,5 +1,5 @@
 {
-	"name": "@mercuryworkshop/epoxy-tls",
+	"name": "nubila",
 	"version": "2.1.17-1",
 	"description": "A wasm library for using raw encrypted tls/ssl/tcp/udp/https/websocket streams on the browser",
 	"scripts": {
@@ -13,36 +13,36 @@
 		"proxy",
 		"http"
 	],
-	"author": "MercuryWorkshop",
+	"author": "Ruj89",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/MercuryWorkshop/epoxy-tls.git"
+		"url": "git+https://github.com/Ruj89/nubila.git"
 	},
 	"license": "AGPL-3.0-only",
 	"exports": {
 		".": {
-			"import": "./full/epoxy-bundled.js",
-			"types": "./full/epoxy-bundled.d.ts"
+			"import": "./full/nubila-bundled.js",
+			"types": "./full/nubila-bundled.d.ts"
 		},
-		"./epoxy": {
-			"import": "./full/epoxy.js",
-			"types": "./full/epoxy.d.ts"
+		"./nubila": {
+			"import": "./full/nubila.js",
+			"types": "./full/nubila.d.ts"
 		},
-		"./epoxy-bundled": {
-			"import": "./full/epoxy-bundled.js",
-			"types": "./full/epoxy-bundled.d.ts"
+		"./nubila-bundled": {
+			"import": "./full/nubila-bundled.js",
+			"types": "./full/nubila-bundled.d.ts"
 		},
-		"./minimal-epoxy": {
-			"import": "./minimal/epoxy.js",
-			"types": "./minimal/epoxy.d.ts"
+		"./minimal-nubila": {
+			"import": "./minimal/nubila.js",
+			"types": "./minimal/nubila.d.ts"
 		},
-		"./minimal-epoxy-bundled": {
-			"import": "./minimal/epoxy-bundled.js",
-			"types": "./minimal/epoxy-bundled.d.ts"
+		"./minimal-nubila-bundled": {
+			"import": "./minimal/nubila-bundled.js",
+			"types": "./minimal/nubila-bundled.d.ts"
 		}
 	},
-	"browser": "./full/epoxy-bundled.js",
-	"module": "./full/epoxy-bundled.js",
-	"main": "./full/epoxy-bundled.js",
-	"types": "./full/epoxy-bundled.d.ts"
+	"browser": "./full/nubila-bundled.js",
+	"module": "./full/nubila-bundled.js",
+	"main": "./full/nubila-bundled.js",
+	"types": "./full/nubila-bundled.d.ts"
 }

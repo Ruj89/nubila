@@ -29,37 +29,37 @@ use crate::{
 	stream_provider::StreamProviderService,
 	tokioio::TokioIo,
 	utils::{entries_of_object, from_entries, ws_key},
-	EpoxyClient, EpoxyError, EpoxyHandlers, EpoxyUrlInput, EpoxyWebSocketHeadersInput,
-	EpoxyWebSocketInput,
+	NubilaClient, NubilaError, NubilaHandlers, NubilaUrlInput, NubilaWebSocketHeadersInput,
+	NubilaWebSocketInput,
 };
 
 #[wasm_bindgen]
-pub struct EpoxyWebSocket {
+pub struct NubilaWebSocket {
 	tx: Arc<Mutex<WebSocketWrite<WriteHalf<TokioIo<Upgraded>>>>>,
 	onerror: Function,
 }
 
 #[wasm_bindgen]
-impl EpoxyWebSocket {
+impl NubilaWebSocket {
 	pub(crate) async fn connect(
-		client: &EpoxyClient,
-		handlers: EpoxyHandlers,
-		url: EpoxyUrlInput,
+		client: &NubilaClient,
+		handlers: NubilaHandlers,
+		url: NubilaUrlInput,
 		protocols: Vec<String>,
-		headers: EpoxyWebSocketHeadersInput,
+		headers: NubilaWebSocketHeadersInput,
 		user_agent: &str,
-	) -> Result<Self, EpoxyError> {
+	) -> Result<Self, NubilaError> {
 		let headers = JsValue::from(headers);
-		let EpoxyHandlers {
+		let NubilaHandlers {
 			onopen,
 			onclose,
 			onerror,
 			onmessage,
 		} = handlers;
 		let onerror_cloned = onerror.clone();
-		let ret: Result<EpoxyWebSocket, EpoxyError> = async move {
+		let ret: Result<NubilaWebSocket, NubilaError> = async move {
 			let url: Uri = url.try_into()?;
-			let host = url.host().ok_or(EpoxyError::NoUrlHost)?;
+			let host = url.host().ok_or(NubilaError::NoUrlHost)?;
 
 			let mut req = Request::builder()
 				.method(Method::GET)
@@ -158,14 +158,14 @@ impl EpoxyWebSocket {
 		}
 	}
 
-	pub async fn send(&self, payload: EpoxyWebSocketInput) -> Result<(), EpoxyError> {
+	pub async fn send(&self, payload: NubilaWebSocketInput) -> Result<(), NubilaError> {
 		let ret = if let Some(str) = payload.as_string() {
 			self.tx
 				.lock()
 				.await
 				.write_frame(Frame::text(Payload::Owned(str.as_bytes().to_vec())))
 				.await
-				.map_err(EpoxyError::from)
+				.map_err(NubilaError::from)
 		} else if let Some(binary) = payload.dyn_ref::<ArrayBuffer>() {
 			self.tx
 				.lock()
@@ -174,9 +174,9 @@ impl EpoxyWebSocket {
 					Uint8Array::new(binary).to_vec(),
 				)))
 				.await
-				.map_err(EpoxyError::from)
+				.map_err(NubilaError::from)
 		} else {
-			Err(EpoxyError::WsInvalidPayload(format!(
+			Err(NubilaError::WsInvalidPayload(format!(
 				"{:?}",
 				JsValue::from(payload)
 			)))
@@ -193,7 +193,7 @@ impl EpoxyWebSocket {
 		}
 	}
 
-	pub async fn close(&self, code: u16, reason: String) -> Result<(), EpoxyError> {
+	pub async fn close(&self, code: u16, reason: String) -> Result<(), NubilaError> {
 		let ret = self
 			.tx
 			.lock()
@@ -214,8 +214,8 @@ impl EpoxyWebSocket {
 
 async fn request(
 	req: Request<Empty<Bytes>>,
-	client: &EpoxyClient,
-) -> Result<Response<Incoming>, EpoxyError> {
+	client: &NubilaClient,
+) -> Result<Response<Incoming>, NubilaError> {
 	let stream = StreamProviderService(client.stream_provider.clone())
 		.connect(req.uri().clone())
 		.await?;
@@ -228,7 +228,7 @@ async fn request(
 
 	spawn_local(async move {
 		if let Err(err) = conn.with_upgrades().await {
-			console_error!("epoxy: websocket connection task failed: {:?}", err);
+			console_error!("nubila: websocket connection task failed: {:?}", err);
 		}
 	});
 
@@ -236,9 +236,9 @@ async fn request(
 }
 
 // https://github.com/snapview/tungstenite-rs/blob/314feea3055a93e585882fb769854a912a7e6dae/src/handshake/client.rs#L189
-fn verify(response: &Response<Incoming>) -> Result<(), EpoxyError> {
+fn verify(response: &Response<Incoming>) -> Result<(), NubilaError> {
 	if response.status() != StatusCode::SWITCHING_PROTOCOLS {
-		return Err(EpoxyError::WsInvalidStatusCode(
+		return Err(NubilaError::WsInvalidStatusCode(
 			response.status().as_u16(),
 			StatusCode::SWITCHING_PROTOCOLS.as_u16(),
 		));
@@ -252,7 +252,7 @@ fn verify(response: &Response<Incoming>) -> Result<(), EpoxyError> {
 		.unwrap_or_default();
 
 	if !upgrade_header.eq_ignore_ascii_case("websocket") {
-		return Err(EpoxyError::WsInvalidUpgradeHeader(
+		return Err(NubilaError::WsInvalidUpgradeHeader(
 			upgrade_header.to_string(),
 		));
 	}
@@ -263,7 +263,7 @@ fn verify(response: &Response<Incoming>) -> Result<(), EpoxyError> {
 		.unwrap_or_default();
 
 	if !connection_header.eq_ignore_ascii_case("Upgrade") {
-		return Err(EpoxyError::WsInvalidConnectionHeader(
+		return Err(NubilaError::WsInvalidConnectionHeader(
 			connection_header.to_string(),
 		));
 	}

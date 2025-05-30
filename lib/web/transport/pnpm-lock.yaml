@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       nubila:
-        specifier: link:../../../dist/web
-        version: link:../dist/web
+        specifier: link:../client
+        version: link:../client
     devDependencies:
       '@mercuryworkshop/bare-mux':
         specifier: ^2.1.7

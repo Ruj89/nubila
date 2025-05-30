@@ -1,7 +1,7 @@
 {
 	"name": "nubila-transport",
 	"version": "1.0.0",
-	"description": "a bare transport that implements end-to-end encryption with Nubila, fork of epoxy-tls and wisp transport layer",
+	"description": "a bare transport that implements end-to-end encryption with Nubila, fork of nubila and wisp transport layer",
 	"main": "./dist/index.mjs",
 	"keywords": [],
 	"author": "",
@@ -12,7 +12,7 @@
 		"prepack": "npm run build"
 	},
 	"dependencies": {
-		"nubila": "link:../../../dist/web"
+		"nubila": "link:../client"
 	},
 	"devDependencies": {
 		"@mercuryworkshop/bare-mux": "^2.1.7",

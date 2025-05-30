@@ -37,7 +37,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{ResponseInit, Url, WritableStream};
 #[cfg(feature = "full")]
-use websocket::EpoxyWebSocket;
+use websocket::NubilaWebSocket;
 use wisp_mux::{
 	packet::{CloseReason, StreamType},
 	WispError,
@@ -53,46 +53,46 @@ mod websocket;
 mod ws_wrapper;
 
 #[wasm_bindgen(typescript_custom_section)]
-const EPOXYCLIENT_TYPES: &'static str = r#"
-type EpoxyIoStream = {
+const NUBILACLIENT_TYPES: &'static str = r#"
+type NubilaIoStream = {
 	read: ReadableStream<Uint8Array>,
 	write: WritableStream<Uint8Array>,
 };
-type EpoxyWispTransport = string | (() => { read: ReadableStream<ArrayBuffer>, write: WritableStream<Uint8Array> });
-type EpoxyWebSocketInput = string | ArrayBuffer;
-type EpoxyWebSocketHeadersInput = Headers | { [key: string]: string };
-type EpoxyUrlInput = string | URL;
+type NubilaWispTransport = string | (() => { read: ReadableStream<ArrayBuffer>, write: WritableStream<Uint8Array> });
+type NubilaWebSocketInput = string | ArrayBuffer;
+type NubilaWebSocketHeadersInput = Headers | { [key: string]: string };
+type NubilaUrlInput = string | URL;
 "#;
 #[wasm_bindgen]
 extern "C" {
-	#[wasm_bindgen(typescript_type = "EpoxyWispTransport")]
-	pub type EpoxyWispTransport;
-	#[wasm_bindgen(typescript_type = "EpoxyIoStream")]
-	pub type EpoxyIoStream;
-	#[wasm_bindgen(typescript_type = "EpoxyWebSocketInput")]
-	pub type EpoxyWebSocketInput;
-	#[wasm_bindgen(typescript_type = "EpoxyWebSocketHeadersInput")]
-	pub type EpoxyWebSocketHeadersInput;
-	#[wasm_bindgen(typescript_type = "EpoxyUrlInput")]
-	pub type EpoxyUrlInput;
+	#[wasm_bindgen(typescript_type = "NubilaWispTransport")]
+	pub type NubilaWispTransport;
+	#[wasm_bindgen(typescript_type = "NubilaIoStream")]
+	pub type NubilaIoStream;
+	#[wasm_bindgen(typescript_type = "NubilaWebSocketInput")]
+	pub type NubilaWebSocketInput;
+	#[wasm_bindgen(typescript_type = "NubilaWebSocketHeadersInput")]
+	pub type NubilaWebSocketHeadersInput;
+	#[wasm_bindgen(typescript_type = "NubilaUrlInput")]
+	pub type NubilaUrlInput;
 }
 
-impl TryFrom<EpoxyUrlInput> for Uri {
-	type Error = EpoxyError;
-	fn try_from(value: EpoxyUrlInput) -> Result<Self, Self::Error> {
+impl TryFrom<NubilaUrlInput> for Uri {
+	type Error = NubilaError;
+	fn try_from(value: NubilaUrlInput) -> Result<Self, Self::Error> {
 		let value = JsValue::from(value);
 		if let Some(value) = value.dyn_ref::<Url>() {
-			value.href().try_into().map_err(EpoxyError::from)
+			value.href().try_into().map_err(NubilaError::from)
 		} else if let Some(value) = value.as_string() {
-			value.try_into().map_err(EpoxyError::from)
+			value.try_into().map_err(NubilaError::from)
 		} else {
-			Err(EpoxyError::InvalidUrl(format!("{value:?}")))
+			Err(NubilaError::InvalidUrl(format!("{value:?}")))
 		}
 	}
 }
 
 #[derive(Debug, Error)]
-pub enum EpoxyError {
+pub enum NubilaError {
 	#[error("Invalid DNS name: {0:?} ({0})")]
 	InvalidDnsName(#[from] futures_rustls::rustls::pki_types::InvalidDnsNameError),
 	#[error("Wisp: {0:?} ({0})")]
@@ -172,7 +172,7 @@ pub enum EpoxyError {
 	StreamingBodyCollectFailed(Box<dyn Error + Sync + Send>),
 }
 
-impl EpoxyError {
+impl NubilaError {
 	#[expect(clippy::needless_pass_by_value)]
 	pub fn wisp_transport(value: JsValue) -> Self {
 		if let Some(err) = value.dyn_ref::<js_sys::Error>() {
@@ -183,49 +183,49 @@ impl EpoxyError {
 	}
 }
 
-impl From<EpoxyError> for JsValue {
-	fn from(value: EpoxyError) -> Self {
+impl From<NubilaError> for JsValue {
+	fn from(value: NubilaError) -> Self {
 		JsError::from(value).into()
 	}
 }
 
-impl From<InvalidUri> for EpoxyError {
+impl From<InvalidUri> for NubilaError {
 	fn from(value: InvalidUri) -> Self {
 		http::Error::from(value).into()
 	}
 }
 
-impl From<InvalidUriParts> for EpoxyError {
+impl From<InvalidUriParts> for NubilaError {
 	fn from(value: InvalidUriParts) -> Self {
 		http::Error::from(value).into()
 	}
 }
 
-impl From<InvalidHeaderName> for EpoxyError {
+impl From<InvalidHeaderName> for NubilaError {
 	fn from(value: InvalidHeaderName) -> Self {
 		http::Error::from(value).into()
 	}
 }
 
-impl From<InvalidHeaderValue> for EpoxyError {
+impl From<InvalidHeaderValue> for NubilaError {
 	fn from(value: InvalidHeaderValue) -> Self {
 		http::Error::from(value).into()
 	}
 }
 
-impl From<InvalidMethod> for EpoxyError {
+impl From<InvalidMethod> for NubilaError {
 	fn from(value: InvalidMethod) -> Self {
 		http::Error::from(value).into()
 	}
 }
 
-enum EpoxyResponse {
+enum NubilaResponse {
 	Success(Response<Incoming>),
 	Redirect((Response<Incoming>, http::Request<StreamingBody>)),
 }
 
 #[cfg(feature = "full")]
-enum EpoxyCompression {
+enum NubilaCompression {
 	Brotli,
 	Gzip,
 }
@@ -234,7 +234,7 @@ enum EpoxyCompression {
 cfg_if! {
 	if #[cfg(feature = "full")] {
 		#[wasm_bindgen]
-		pub struct EpoxyClientOptions {
+		pub struct NubilaClientOptions {
 			pub wisp_v2: bool,
 			pub udp_extension_required: bool,
 			pub title_case_headers: bool,
@@ -252,7 +252,7 @@ cfg_if! {
 		}
 	} else {
 		#[wasm_bindgen]
-		pub struct EpoxyClientOptions {
+		pub struct NubilaClientOptions {
 			pub wisp_v2: bool,
 			pub udp_extension_required: bool,
 			pub title_case_headers: bool,
@@ -269,14 +269,14 @@ cfg_if! {
 }
 
 #[wasm_bindgen]
-impl EpoxyClientOptions {
+impl NubilaClientOptions {
 	#[wasm_bindgen(constructor)]
 	pub fn new_default() -> Self {
 		Self::default()
 	}
 }
 
-impl Default for EpoxyClientOptions {
+impl Default for NubilaClientOptions {
 	fn default() -> Self {
 		Self {
 			wisp_v2: false,
@@ -297,7 +297,7 @@ impl Default for EpoxyClientOptions {
 }
 
 #[wasm_bindgen(getter_with_clone)]
-pub struct EpoxyHandlers {
+pub struct NubilaHandlers {
 	pub onopen: Function,
 	pub onclose: Function,
 	pub onerror: Function,
@@ -306,7 +306,7 @@ pub struct EpoxyHandlers {
 
 #[cfg(feature = "full")]
 #[wasm_bindgen]
-impl EpoxyHandlers {
+impl NubilaHandlers {
 	#[wasm_bindgen(constructor)]
 	pub fn new(
 		onopen: Function,
@@ -330,12 +330,12 @@ fn create_wisp_transport(function: Function) -> ProviderWispTransportGenerator {
 		Box::pin(SendWrapper::new(async move {
 			let transport = wisp_transport
 				.call1(&JsValue::NULL, &wisp_v2.into())
-				.map_err(EpoxyError::wisp_transport)?;
+				.map_err(NubilaError::wisp_transport)?;
 
 			let transport = match transport.dyn_into::<Promise>() {
 				Ok(transport) => {
 					let fut = JsFuture::from(transport);
-					fut.await.map_err(EpoxyError::wisp_transport)?
+					fut.await.map_err(NubilaError::wisp_transport)?
 				}
 				Err(transport) => transport,
 			}
@@ -344,14 +344,14 @@ fn create_wisp_transport(function: Function) -> ProviderWispTransportGenerator {
 			let read = Box::pin(SendWrapper::new(
 				wasm_streams::ReadableStream::from_raw(object_get(&transport, "read").into())
 					.try_into_stream()
-					.map_err(|x| EpoxyError::wisp_transport(x.0.into()))?
+					.map_err(|x| NubilaError::wisp_transport(x.0.into()))?
 					.map(|x| {
 						let pkt = x
-							.map_err(EpoxyError::wisp_transport)
+							.map_err(NubilaError::wisp_transport)
 							.map_err(|x| WispError::WsImplError(Box::new(x)))?;
 						let arr: ArrayBuffer = pkt.dyn_into().map_err(|x| {
 							WispError::WsImplError(Box::new(
-								EpoxyError::InvalidWispTransportPacket(format!("{x:?}")),
+								NubilaError::InvalidWispTransportPacket(format!("{x:?}")),
 							))
 						})?;
 						Ok::<Bytes, WispError>(Bytes::from(Uint8Array::new(&arr).to_vec()))
@@ -362,7 +362,7 @@ fn create_wisp_transport(function: Function) -> ProviderWispTransportGenerator {
 			let write = Box::pin(WispTransportWrite(
 				wasm_streams::WritableStream::from_raw(write)
 					.try_into_sink()
-					.map_err(|x| EpoxyError::wisp_transport(x.0.into()))?,
+					.map_err(|x| NubilaError::wisp_transport(x.0.into()))?,
 			)) as ProviderWispTransportWrite;
 
 			Ok((read, write))
@@ -371,7 +371,7 @@ fn create_wisp_transport(function: Function) -> ProviderWispTransportGenerator {
 }
 
 #[wasm_bindgen(inspectable)]
-pub struct EpoxyClient {
+pub struct NubilaClient {
 	stream_provider: Arc<StreamProvider>,
 	client: Client<StreamProviderService, StreamingBody>,
 
@@ -388,16 +388,16 @@ pub struct EpoxyClient {
 }
 
 #[wasm_bindgen]
-impl EpoxyClient {
+impl NubilaClient {
 	#[wasm_bindgen(constructor)]
 	pub fn new(
-		transport: EpoxyWispTransport,
-		options: EpoxyClientOptions,
-	) -> Result<EpoxyClient, EpoxyError> {
+		transport: NubilaWispTransport,
+		options: NubilaClientOptions,
+	) -> Result<NubilaClient, NubilaError> {
 		let stream_provider = if let Some(wisp_url) = transport.as_string() {
 			let uri: Uri = wisp_url.clone().try_into()?;
 			if uri.scheme_str() != Some("wss") && uri.scheme_str() != Some("ws") {
-				return Err(EpoxyError::InvalidUrlScheme(
+				return Err(NubilaError::InvalidUrlScheme(
 					uri.scheme_str().map(ToString::to_string),
 				));
 			}
@@ -416,7 +416,7 @@ impl EpoxyClient {
 						let (write, read) = WebSocketWrapper::connect(&wisp_url, &ws_protocols)?;
 						while write.inner.ready_state() == 0 {
 							if !write.wait_for_open().await {
-								return Err(EpoxyError::WebSocketConnectFailed(
+								return Err(NubilaError::WebSocketConnectFailed(
 									"websocket did not open".to_string(),
 								));
 							}
@@ -432,7 +432,7 @@ impl EpoxyClient {
 				&options,
 			)?)
 		} else {
-			return Err(EpoxyError::InvalidWispTransport(format!(
+			return Err(NubilaError::InvalidWispTransport(format!(
 				"{:?}",
 				JsValue::from(transport)
 			)));
@@ -467,25 +467,25 @@ impl EpoxyClient {
 		})
 	}
 
-	pub async fn replace_stream_provider(&self) -> Result<(), EpoxyError> {
+	pub async fn replace_stream_provider(&self) -> Result<(), NubilaError> {
 		self.stream_provider.replace_client().await
 	}
 
 	#[cfg(feature = "full")]
 	pub async fn connect_websocket(
 		&self,
-		handlers: EpoxyHandlers,
-		url: EpoxyUrlInput,
+		handlers: NubilaHandlers,
+		url: NubilaUrlInput,
 		protocols: Vec<String>,
-		headers: EpoxyWebSocketHeadersInput,
-	) -> Result<EpoxyWebSocket, EpoxyError> {
-		EpoxyWebSocket::connect(self, handlers, url, protocols, headers, &self.user_agent).await
+		headers: NubilaWebSocketHeadersInput,
+	) -> Result<NubilaWebSocket, NubilaError> {
+		NubilaWebSocket::connect(self, handlers, url, protocols, headers, &self.user_agent).await
 	}
 
-	pub async fn connect_tcp(&self, url: EpoxyUrlInput) -> Result<EpoxyIoStream, EpoxyError> {
+	pub async fn connect_tcp(&self, url: NubilaUrlInput) -> Result<NubilaIoStream, NubilaError> {
 		let url: Uri = url.try_into()?;
-		let host = url.host().ok_or(EpoxyError::NoUrlHost)?;
-		let port = url.port_u16().ok_or(EpoxyError::NoUrlPort)?;
+		let host = url.host().ok_or(NubilaError::NoUrlHost)?;
+		let port = url.port_u16().ok_or(NubilaError::NoUrlPort)?;
 		let stream = self
 			.stream_provider
 			.get_asyncread(StreamType::Tcp, host.to_string(), port)
@@ -496,10 +496,10 @@ impl EpoxyClient {
 		))
 	}
 
-	pub async fn connect_tls(&self, url: EpoxyUrlInput) -> Result<EpoxyIoStream, EpoxyError> {
+	pub async fn connect_tls(&self, url: NubilaUrlInput) -> Result<NubilaIoStream, NubilaError> {
 		let url: Uri = url.try_into()?;
-		let host = url.host().ok_or(EpoxyError::NoUrlHost)?;
-		let port = url.port_u16().ok_or(EpoxyError::NoUrlPort)?;
+		let host = url.host().ok_or(NubilaError::NoUrlHost)?;
+		let port = url.port_u16().ok_or(NubilaError::NoUrlPort)?;
 		let stream = self
 			.stream_provider
 			.get_tls_stream(host.to_string(), port, false)
@@ -510,10 +510,10 @@ impl EpoxyClient {
 		))
 	}
 
-	pub async fn connect_udp(&self, url: EpoxyUrlInput) -> Result<EpoxyIoStream, EpoxyError> {
+	pub async fn connect_udp(&self, url: NubilaUrlInput) -> Result<NubilaIoStream, NubilaError> {
 		let url: Uri = url.try_into()?;
-		let host = url.host().ok_or(EpoxyError::NoUrlHost)?;
-		let port = url.port_u16().ok_or(EpoxyError::NoUrlPort)?;
+		let host = url.host().ok_or(NubilaError::NoUrlHost)?;
+		let port = url.port_u16().ok_or(NubilaError::NoUrlPort)?;
 		let stream = self
 			.stream_provider
 			.get_stream(StreamType::Udp, host.to_string(), port)
@@ -525,7 +525,7 @@ impl EpoxyClient {
 		&self,
 		req: http::Request<StreamingBody>,
 		should_redirect: bool,
-	) -> Result<EpoxyResponse, EpoxyError> {
+	) -> Result<NubilaResponse, NubilaError> {
 		let new_req = if should_redirect {
 			Some(req.clone())
 		} else {
@@ -541,9 +541,9 @@ impl EpoxyClient {
 					&& let Ok(redirect_url) = new_req.uri().get_redirect(location)
 				{
 					*new_req.uri_mut() = redirect_url;
-					Ok(EpoxyResponse::Redirect((resp, new_req)))
+					Ok(NubilaResponse::Redirect((resp, new_req)))
 				} else {
-					Ok(EpoxyResponse::Success(resp))
+					Ok(NubilaResponse::Success(resp))
 				}
 			}
 			Err(err) => Err(err.into()),
@@ -554,14 +554,14 @@ impl EpoxyClient {
 		&self,
 		req: http::Request<StreamingBody>,
 		should_redirect: bool,
-	) -> Result<(hyper::Response<Incoming>, Uri, bool), EpoxyError> {
+	) -> Result<(hyper::Response<Incoming>, Uri, bool), NubilaError> {
 		let mut redirected = false;
 		let mut current_url = req.uri().clone();
-		let mut current_resp: EpoxyResponse = self.send_req_inner(req, should_redirect).await?;
+		let mut current_resp: NubilaResponse = self.send_req_inner(req, should_redirect).await?;
 		for _ in 0..self.redirect_limit {
 			match current_resp {
-				EpoxyResponse::Success(_) => break,
-				EpoxyResponse::Redirect((_, req)) => {
+				NubilaResponse::Success(_) => break,
+				NubilaResponse::Redirect((_, req)) => {
 					redirected = true;
 					current_url = req.uri().clone();
 					current_resp = self.send_req_inner(req, should_redirect).await?;
@@ -570,7 +570,7 @@ impl EpoxyClient {
 		}
 
 		match current_resp {
-			EpoxyResponse::Redirect((resp, _)) | EpoxyResponse::Success(resp) => {
+			NubilaResponse::Redirect((resp, _)) | NubilaResponse::Success(resp) => {
 				Ok((resp, current_url, redirected))
 			}
 		}
@@ -578,12 +578,12 @@ impl EpoxyClient {
 
 	pub async fn fetch(
 		&self,
-		url: EpoxyUrlInput,
+		url: NubilaUrlInput,
 		options: Object,
-	) -> Result<web_sys::Response, EpoxyError> {
+	) -> Result<web_sys::Response, NubilaError> {
 		let url: Uri = url.try_into()?;
 		// only valid `Scheme`s are HTTP and HTTPS, which are the ones we support
-		url.scheme().ok_or(EpoxyError::InvalidUrlScheme(
+		url.scheme().ok_or(NubilaError::InvalidUrlScheme(
 			url.scheme_str().map(ToString::to_string),
 		))?;
 
@@ -605,7 +605,7 @@ impl EpoxyClient {
 			Some(buf) => {
 				let (body, content_type) = convert_streaming_body(buf)
 					.await
-					.map_err(|_| EpoxyError::InvalidRequestBody)?;
+					.map_err(|_| NubilaError::InvalidRequestBody)?;
 				body_content_type = content_type;
 				body.into_httpbody()?
 			}
@@ -630,7 +630,7 @@ impl EpoxyClient {
 		// which we don't know
 		let headers_map = request_builder
 			.headers_mut()
-			.ok_or(EpoxyError::InvalidRequest)?;
+			.ok_or(NubilaError::InvalidRequest)?;
 
 		cfg_if! {
 			if #[cfg(feature = "full")] {
@@ -675,7 +675,7 @@ impl EpoxyClient {
 		if self.certs_tampered {
 			response
 				.headers_mut()
-				.insert("X-Epoxy-CertsTampered", HeaderValue::from_static("true"));
+				.insert("X-Nubila-CertsTampered", HeaderValue::from_static("true"));
 		}
 
 		let response_headers: Array = response
@@ -689,7 +689,7 @@ impl EpoxyClient {
 			})
 			.collect();
 		let response_headers = from_entries(&response_headers)
-			.map_err(|_| EpoxyError::ResponseHeadersFromEntriesFailed)?;
+			.map_err(|_| NubilaError::ResponseHeadersFromEntriesFailed)?;
 
 		let response_headers_raw = response.headers().clone();
 
@@ -707,18 +707,18 @@ impl EpoxyClient {
 						.and_then(|val| val.to_str().ok())
 						.unwrap_or_default()
 					{
-						"gzip" => Some(EpoxyCompression::Gzip),
-						"br" => Some(EpoxyCompression::Brotli),
+						"gzip" => Some(NubilaCompression::Gzip),
+						"br" => Some(NubilaCompression::Brotli),
 						_ => None,
 					};
 
 					let response_body = BodyDataStream::new(response.into_body()).map_err(std::io::Error::other).into_async_read();
 					let decompressed_body = match compression {
 						Some(alg) => match alg {
-							EpoxyCompression::Gzip => {
+							NubilaCompression::Gzip => {
 								Either::Left(Either::Left(async_comp::GzipDecoder::new(response_body)))
 							}
-							EpoxyCompression::Brotli => {
+							NubilaCompression::Brotli => {
 								Either::Left(Either::Right(async_comp::BrotliDecoder::new(response_body)))
 							}
 						},
@@ -742,7 +742,7 @@ impl EpoxyClient {
 			response_stream.as_ref(),
 			&response_builder,
 		)
-		.map_err(|_| EpoxyError::ResponseNewFailed)?;
+		.map_err(|_| NubilaError::ResponseNewFailed)?;
 
 		utils::define_property(&resp, "url", response_uri.to_string().into());
 		utils::define_property(&resp, "redirected", redirected.into());
